@@ -28,6 +28,15 @@
         "tsConfigPath": "apps/aso-ciencias-system/tsconfig.app.json"
       }
     },
+    "audit-service": {
+      "type": "application",
+      "root": "apps/audit-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/audit-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/audit-service/tsconfig.app.json"
+      }
+    },
     "auth-service": {
       "type": "application",
       "root": "apps/auth-service",
@@ -46,6 +55,15 @@
         "tsConfigPath": "apps/inventory-service/tsconfig.app.json"
       }
     },
+    "invoice-service": {
+      "type": "application",
+      "root": "apps/invoice-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/invoice-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/invoice-service/tsconfig.app.json"
+      }
+    },
     "notification-service": {
       "type": "application",
       "root": "apps/notification-service",
@@ -55,6 +73,24 @@
         "tsConfigPath": "apps/notification-service/tsconfig.app.json"
       }
     },
+    "payment-service": {
+      "type": "application",
+      "root": "apps/payment-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/payment-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/payment-service/tsconfig.app.json"
+      }
+    },
+    "review-service": {
+      "type": "application",
+      "root": "apps/review-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/review-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/review-service/tsconfig.app.json"
+      }
+    },
     "sales-service": {
       "type": "application",
       "root": "apps/sales-service",
@@ -62,6 +98,24 @@
       "sourceRoot": "apps/sales-service/src",
       "compilerOptions": {
         "tsConfigPath": "apps/sales-service/tsconfig.app.json"
+      }
+    },
+    "shipping-service": {
+      "type": "application",
+      "root": "apps/shipping-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/shipping-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/shipping-service/tsconfig.app.json"
+      }
+    },
+    "support-service": {
+      "type": "application",
+      "root": "apps/support-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/support-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/support-service/tsconfig.app.json"
       }
     }
   }

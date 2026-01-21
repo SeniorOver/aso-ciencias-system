@@ -8,7 +8,8 @@ import { Product } from './products/entities/product.entity';
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
+      // CAMBIO CRÍTICO: Usamos variable de entorno O el nombre del contenedor 'postgres'
+      host: process.env.DB_HOST || 'postgres', 
       port: 5432,
       username: 'admin',
       password: 'password123',

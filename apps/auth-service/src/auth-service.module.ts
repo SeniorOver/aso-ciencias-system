@@ -1,23 +1,29 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt'; // <--- NUEVO
 import { AuthServiceController } from './auth-service.controller';
 import { AuthServiceService } from './auth-service.service';
 import { User } from './users/entities/user.entity';
 
 @Module({
   imports: [
-    // 1. Configuración de la conexión a Postgres
+    // 1. Configuración JWT (NUEVO)
+    JwtModule.register({
+      secret: 'SECRET_KEY_PROYECTO_FINAL', // En prod usa variables de entorno
+      signOptions: { expiresIn: '1h' },
+    }),
+    
+    // 2. Configuración Postgres (LO QUE YA TENIAS)
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',      // Se conecta al Docker que acabas de levantar
+      host: process.env.DB_HOST || 'postgres', 
       port: 5432,
-      username: 'admin',      // Lo definimos en el docker-compose
-      password: 'password123',// Lo definimos en el docker-compose
-      database: 'aso_db',     // Lo definimos en el docker-compose
-      autoLoadEntities: true, // Carga las tablas solas
-      synchronize: true,      // ¡OJO! Solo para desarrollo: crea las tablas si no existen
+      username: 'admin',
+      password: 'password123',
+      database: 'aso_db',
+      autoLoadEntities: true,
+      synchronize: true,
     }),
-    // 2. Registramos la tabla User para poder usarla
     TypeOrmModule.forFeature([User]),
   ],
   controllers: [AuthServiceController],
