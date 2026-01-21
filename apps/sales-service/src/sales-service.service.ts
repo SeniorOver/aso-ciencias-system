@@ -12,33 +12,35 @@ export class SalesServiceService {
     @InjectRepository(Sale)
     private saleRepo: Repository<Sale>,
     private readonly httpService: HttpService,
+    // Inyectamos el cliente RabbitMQ configurado en el Module
     @Inject('NOTIFICATION_SERVICE') private clientRabbit: ClientProxy, 
   ) {}
 
   async create(data: any) {
     // 1. Comunicación HTTP con Inventario (Síncrona)
     try {
+      // CORRECCIÓN CRÍTICA: Cambiamos 'localhost' por 'inventory-service'
+      // Docker DNS resolverá 'inventory-service' a la IP correcta del contenedor vecino.
       await lastValueFrom(
         this.httpService.patch(
-          `http://localhost:3001/products/${data.productId}/decrease`,
+          `http://inventory-service:3001/products/${data.productId}/decrease`,
           { quantity: data.quantity }
         )
       );
     } catch (error) {
       console.error('Error stock:', error.message);
-      throw new Error('Stock insuficiente');
+      // Tip: Si inventario falla, lanzamos error y NO guardamos la venta
+      throw new Error('Stock insuficiente o Error de Conexión con Inventario');
     }
 
     // 2. Guardar Venta
-    // CORRECCIÓN AQUÍ: Agregamos ': Sale'
-// Quitamos el ': Sale' del inicio y ponemos 'as Sale' al final
-// Le decimos: Trátalo como 'desconocido' y luego fuérzalo a ser 'Sale'
     const newSale = this.saleRepo.create(data) as unknown as Sale;
     const savedSale = await this.saleRepo.save(newSale);
 
     // 3. COMUNICACIÓN ASÍNCRONA (RabbitMQ)
+    // Emitimos el evento 'sale_created' a la cola
     this.clientRabbit.emit('sale_created', {
-      saleId: savedSale.id, // ¡Ahora esto funcionará!
+      saleId: savedSale.id,
       product: data.productId,
       total: data.totalPrice,
       email: 'admin@empresa.com'
