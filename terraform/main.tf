@@ -43,21 +43,24 @@ resource "aws_security_group" "microservices_sg_v3" {
   }
 }
 
-# 2. SERVIDOR
+# 2. SERVIDOR PRINCIPAL
 resource "aws_instance" "app_server" {
   ami           = "ami-0c7217cdde317cfec" # Ubuntu 22.04
   instance_type = "t2.small"
   
+  # --- ¡AQUÍ ESTABA EL PROBLEMA! ---
+  key_name      = "vockey"  # Agregamos esto para usar tu labsuser.pem
+  # ---------------------------------
+   
   vpc_security_group_ids = [aws_security_group.microservices_sg_v3.id]
 
-  # --- CAMBIO CRITICO: AUMENTAR DISCO A 20GB ---
+  # DISCO DE 20GB
   root_block_device {
-    volume_size = 20    # Pedimos 20 Gigabytes (Suficiente para 12 contenedores)
-    volume_type = "gp2" # Tipo de disco estándar
+    volume_size = 20    
+    volume_type = "gp2" 
   }
-  # ---------------------------------------------
 
-  # 3. EL GRAN SCRIPT DE DESPLIEGUE (10 SERVICIOS)
+  # 3. EL SCRIPT DE DESPLIEGUE (Nota: Aun levanta postgres local, lo cambiaremos al entrar)
   user_data = <<-EOF
               #!/bin/bash
               echo "--- INICIANDO CONFIGURACION DEL SERVIDOR ---"
@@ -72,15 +75,17 @@ resource "aws_instance" "app_server" {
               # B. Crear Red Interna
               sudo docker network create app-network
 
-              # C. Infraestructura (RabbitMQ + Postgres)
+              # C. Infraestructura (RabbitMQ + Postgres Local)
               echo "--- LEVANTANDO INFRAESTRUCTURA ---"
               sudo docker run -d --name rabbitmq --network app-network --restart always rabbitmq:3-management
               
+              # Mantenemos este Postgres local TEMPORALMENTE para que el script no falle al arrancar.
+              # Cuando entres por SSH, cambiaremos las variables para usar el RDS.
               sudo docker run -d --name postgres --network app-network --restart always \
                 -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=password123 -e POSTGRES_DB=aso_db \
                 postgres:13
 
-              sleep 15 # Esperar a que la BD despierte
+              sleep 15 
 
               # D. LOS 10 MICROSERVICIOS
               echo "--- DESCARGANDO Y LEVANTANDO SERVICIOS ---"
@@ -110,13 +115,11 @@ resource "aws_instance" "app_server" {
                 -e RABBITMQ_URL=amqp://rabbitmq:5672 \
                 erickfabricioc/aso-ciencias-system:analytics-service
 
-              # --- LOS NUEVOS 5 ---
-
               # 6. Payment
               sudo docker run -d --name payment-service --network app-network --restart always \
                 erickfabricioc/aso-ciencias-system:payment-service
 
-              # 7. Invoice (Ex-Shipping)
+              # 7. Invoice
               sudo docker run -d --name invoice-service --network app-network --restart always \
                 erickfabricioc/aso-ciencias-system:invoice-service
 
@@ -132,8 +135,7 @@ resource "aws_instance" "app_server" {
               sudo docker run -d --name audit-service --network app-network --restart always \
                 erickfabricioc/aso-ciencias-system:audit-service
 
-              # E. EL CEREBRO (API Gateway)
-              # Es el único expuesto al puerto 8080
+              # E. GATEWAY
               echo "--- LEVANTANDO GATEWAY ---"
               sudo docker run -d --name api-gateway --network app-network --restart always \
                 -p 8080:8080 \
@@ -152,14 +154,11 @@ output "server_public_ip" {
   description = "IP Publica del Servidor Final"
 }
 
-# --- INICIO BLOQUE BASTION (Copiar al final del archivo) ---
-
 # 4. SEGURIDAD BASTION
 resource "aws_security_group" "bastion_sg" {
   name        = "bastion_sg_final"
   description = "Security Group solo para Bastion Host"
 
-  # Solo permite SSH (22) desde cualquier lugar
   ingress {
     from_port   = 22
     to_port     = 22
@@ -175,11 +174,11 @@ resource "aws_security_group" "bastion_sg" {
   }
 }
 
-# 5. SERVIDOR BASTION (Jump Box)
+# 5. SERVIDOR BASTION
 resource "aws_instance" "bastion_host" {
-  ami           = "ami-0c7217cdde317cfec" # Usamos la misma AMI Ubuntu que tu server principal
-  instance_type = "t2.micro"              # Instancia pequeña y barata
-  key_name      = "vockey"                # Tu llave actual
+  ami           = "ami-0c7217cdde317cfec" 
+  instance_type = "t2.micro"              
+  key_name      = "vockey"                
 
   vpc_security_group_ids = [aws_security_group.bastion_sg.id]
 
@@ -187,4 +186,48 @@ resource "aws_instance" "bastion_host" {
     Name = "ASO-Bastion-Security"
   }
 }
-# --- FIN BLOQUE BASTION ---
+
+# 6. SEGURIDAD RDS
+resource "aws_security_group" "rds_sg" {
+  name        = "rds_security_group"
+  description = "Permitir acceso al puerto 5432 (Postgres)"
+
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# 7. BASE DE DATOS RDS
+resource "aws_db_instance" "postgres_db" {
+  identifier             = "aso-postgres-db"
+  allocated_storage      = 20              
+  engine                 = "postgres"
+  engine_version         = "16.6"          
+  instance_class         = "db.t3.micro"   
+  db_name                = "aso_db"        
+  username               = "aso_admin"     
+  password               = "password123"   
+  parameter_group_name   = "default.postgres16"
+  skip_final_snapshot    = true            
+  publicly_accessible    = true            
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+
+  tags = {
+    Name = "ASO-RDS-Production"
+  }
+}
+
+output "db_endpoint" {
+  value = aws_db_instance.postgres_db.endpoint
+  description = "La URL de conexion a la base de datos RDS"
+}
