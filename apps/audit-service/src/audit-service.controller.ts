@@ -1,12 +1,18 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { AuditServiceService } from './audit-service.service';
 
-@Controller()
+@Controller('audit') // <--- Ruta base: /audit
 export class AuditServiceController {
-  constructor(private readonly auditServiceService: AuditServiceService) {}
+  constructor(private readonly auditService: AuditServiceService) {}
+
+  @Post()
+  create(@Body() body: any) {
+    // Esperamos recibir: { "action": "...", "userId": "...", "details": "..." }
+    return this.auditService.createLog(body.action, body.userId, body.details);
+  }
 
   @Get()
-  getHello(): string {
-    return this.auditServiceService.getHello();
+  findAll() {
+    return this.auditService.getLogs();
   }
 }

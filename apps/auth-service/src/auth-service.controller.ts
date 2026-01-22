@@ -1,14 +1,13 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager'; // <--- ¡CAMBIO AQUÍ!
 import { AuthServiceService } from './auth-service.service';
 
 @Controller() 
 export class AuthServiceController {
   constructor(private readonly authService: AuthServiceService) {}
 
-  @Post('login') // <--- NUEVA RUTA: POST /login
+  @Post('login')
   loginUser(@Body() body: any) {
-    // Nota: Para el proyecto, asumimos que el usuario existe y le damos token.
-    // En vida real, aquí validarías password antes de llamar a login.
     return this.authService.login(body);
   }
 
@@ -18,7 +17,10 @@ export class AuthServiceController {
   }
 
   @Get('users') 
+  @UseInterceptors(CacheInterceptor) // <--- ¡ESTO ACTIVA REDIS AUTOMÁTICAMENTE!
   getUsers() {
+    // Este mensaje solo saldrá en los logs cuando NO use caché (la primera vez o cada 60s)
+    console.log('👀 Consultando a Base de Datos (Sin Caché)');
     return this.authService.findAll();
   }
 }

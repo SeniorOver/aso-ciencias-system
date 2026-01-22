@@ -1,15 +1,40 @@
 version: '3.8'
 
 services:
+  # --- INFRAESTRUCTURA ---
+
+  # 1. REDIS (Caché)
+  redis:
+    image: redis:alpine
+    container_name: aso_redis
+    ports: ["6379:6379"]
+    command: redis-server --appendonly yes
+
+  # 2. RABBITMQ (Mensajería)
   rabbitmq:
     image: rabbitmq:3-management
     container_name: aso_rabbitmq
     ports: ["15672:15672", "5672:5672"]
 
+  # 3. MONGODB (Logs/Auditoría) - ¡NUEVO!
+  mongo:
+    image: mongo:6.0
+    container_name: aso_mongo
+    ports: ["27017:27017"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    volumes:
+      - mongo_data:/data/db
+
+  # --- MICROSERVICIOS ---
+
   auth-service:
     image: erickfabricioc/aso-ciencias-system:auth-service
     container_name: aso_auth
-    depends_on: [rabbitmq]
+    depends_on: 
+      - rabbitmq
+      - redis
     environment:
       - DB_HOST=aso-postgres-db.cibyxjsyaqwi.us-east-1.rds.amazonaws.com
       - DB_PORT=5432
@@ -18,9 +43,11 @@ services:
       - POSTGRES_USER=aso_admin
       - DB_PASSWORD=password123
       - DB_NAME=aso_db
-      - RABBITMQ_URL=amqp://rabbitmq:5672
       - DB_SSL=true
       - DB_SSL_REJECT_UNAUTHORIZED=false
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
 
   inventory-service:
     image: erickfabricioc/aso-ciencias-system:inventory-service
@@ -88,13 +115,24 @@ services:
     container_name: aso_support
     depends_on: [rabbitmq]
 
+  # AUDIT SERVICE (CONECTADO A MONGO) - ¡MODIFICADO!
   audit-service:
     image: erickfabricioc/aso-ciencias-system:audit-service
     container_name: aso_audit
-    depends_on: [rabbitmq]
+    depends_on: 
+      - rabbitmq
+      - mongo # <--- Espera a que Mongo inicie
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      # Cadena de conexión a Mongo (Usuario:Password@Host:Puerto/BaseDeDatos)
+      - MONGO_URI=mongodb://admin:password123@mongo:27017/audit_db?authSource=admin
 
   api-gateway:
     image: erickfabricioc/aso-ciencias-system:gateway
     container_name: aso_gateway
     ports: ["8080:8080"]
     depends_on: [auth-service, inventory-service, sales-service]
+
+# VOLUMENES PARA PERSISTENCIA - ¡NUEVO!
+volumes:
+  mongo_data:

@@ -5,26 +5,26 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // --- HABILITAR CORS (Importante para que no te bloquee) ---
+  // --- HABILITAR CORS ---
   app.enableCors();
 
-  console.log('--- CONFIGURANDO RUTAS DEL GATEWAY PARA DOCKER ---');
+  console.log('--- 🚀 INICIANDO API GATEWAY (CORREGIDO) ---');
 
   // ---------------------------------------------------------
   // GRUPO 1: LOS ORIGINALES (5 Servicios)
   // ---------------------------------------------------------
 
-  // 1. Auth Service (Puerto 3000)
+  // 1. Auth Service
   app.use(
     '/auth',
     createProxyMiddleware({
-      target: 'http://auth-service:3000', // Nombre del contenedor en Docker
+      target: 'http://auth-service:3000',
       changeOrigin: true,
       pathRewrite: { '^/auth': '' },
     }),
   );
 
-  // 2. Inventory Service (Puerto 3001)
+  // 2. Inventory Service
   app.use(
     '/inventory',
     createProxyMiddleware({
@@ -34,7 +34,7 @@ async function bootstrap() {
     }),
   );
 
-  // 3. Sales Service (Puerto 3002)
+  // 3. Sales Service
   app.use(
     '/sales',
     createProxyMiddleware({
@@ -44,9 +44,9 @@ async function bootstrap() {
     }),
   );
 
-  // 4. Notification Service (Puerto 3003)
+  // 4. Notification Service
   app.use(
-    '/notifications', // Ojo a la ruta
+    '/notifications',
     createProxyMiddleware({
       target: 'http://notification-service:3003',
       changeOrigin: true,
@@ -54,7 +54,7 @@ async function bootstrap() {
     }),
   );
 
-  // 5. Analytics Service (Puerto 3004)
+  // 5. Analytics Service
   app.use(
     '/analytics',
     createProxyMiddleware({
@@ -68,7 +68,7 @@ async function bootstrap() {
   // GRUPO 2: LOS NUEVOS (5 Servicios)
   // ---------------------------------------------------------
 
-  // 6. Payment Service (Puerto 3005)
+  // 6. Payment Service
   app.use(
     '/payments',
     createProxyMiddleware({
@@ -78,7 +78,7 @@ async function bootstrap() {
     }),
   );
 
-  // 7. Invoice Service (Puerto 3006) - REEMPLAZO DE SHIPPING
+  // 7. Invoice Service
   app.use(
     '/invoice',
     createProxyMiddleware({
@@ -88,7 +88,7 @@ async function bootstrap() {
     }),
   );
 
-  // 8. Review Service (Puerto 3007)
+  // 8. Review Service
   app.use(
     '/reviews',
     createProxyMiddleware({
@@ -98,7 +98,7 @@ async function bootstrap() {
     }),
   );
 
-  // 9. Support Service (Puerto 3008)
+  // 9. Support Service
   app.use(
     '/support',
     createProxyMiddleware({
@@ -109,16 +109,23 @@ async function bootstrap() {
   );
 
   // 10. Audit Service (Puerto 3009)
+  // --- ¡AQUÍ ESTÁ EL CAMBIO CLAVE! ---
   app.use(
     '/audit',
     createProxyMiddleware({
-      target: 'http://audit-service:3009',
+      // Usamos el nombre del CONTENEDOR (aso_audit) que vimos en docker ps
+      target: 'http://aso_audit:3009', 
       changeOrigin: true,
-      pathRewrite: { '^/audit': '' },
-    }),
+      // Mantenemos /audit porque tu controlador es @Controller('audit')
+      // Esto nos ayudará a ver errores en el log si falla
+      onError: (err, req, res) => {
+        console.error('🔥 ERROR CONECTANDO CON AUDIT:', err);
+        // Usamos 'res' como any para evitar quejas de tipos en la respuesta
+        (res as any).status(500).send('Error de conexión con Microservicio Audit');
+      }
+    } as any),
   );
 
-  // El Gateway correrá en el Puerto 8080 (Expuesto al mundo)
   await app.listen(8080);
   console.log('🚀 API GATEWAY LISTO EN PUERTO 8080 (MODO DOCKER/AWS)');
 }
