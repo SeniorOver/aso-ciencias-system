@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: aso_rabbitmq
+    ports: ["15672:15672", "5672:5672"]
+
+  auth-service:
+    image: erickfabricioc/aso-ciencias-system:auth-service
+    container_name: aso_auth
+    depends_on: [rabbitmq]
+    environment:
+      - DB_HOST=aso-postgres-db.cibyxjsyaqwi.us-east-1.rds.amazonaws.com
+      - DB_PORT=5432
+      - DB_USERNAME=aso_admin
+      - DB_USER=aso_admin
+      - POSTGRES_USER=aso_admin
+      - DB_PASSWORD=password123
+      - DB_NAME=aso_db
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - DB_SSL=true
+      - DB_SSL_REJECT_UNAUTHORIZED=false
+
+  inventory-service:
+    image: erickfabricioc/aso-ciencias-system:inventory-service
+    container_name: aso_inventory
+    depends_on: [rabbitmq]
+    environment:
+      - DB_HOST=aso-postgres-db.cibyxjsyaqwi.us-east-1.rds.amazonaws.com
+      - DB_PORT=5432
+      - DB_USERNAME=aso_admin
+      - DB_USER=aso_admin
+      - POSTGRES_USER=aso_admin
+      - DB_PASSWORD=password123
+      - DB_NAME=aso_db
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - DB_SSL=true
+      - DB_SSL_REJECT_UNAUTHORIZED=false
+
+  sales-service:
+    image: erickfabricioc/aso-ciencias-system:sales-service
+    container_name: aso_sales
+    depends_on: [rabbitmq]
+    environment:
+      - DB_HOST=aso-postgres-db.cibyxjsyaqwi.us-east-1.rds.amazonaws.com
+      - DB_PORT=5432
+      - DB_USERNAME=aso_admin
+      - DB_USER=aso_admin
+      - POSTGRES_USER=aso_admin
+      - DB_PASSWORD=password123
+      - DB_NAME=aso_db
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - DB_SSL=true
+      - DB_SSL_REJECT_UNAUTHORIZED=false
+
+  notification-service:
+    image: erickfabricioc/aso-ciencias-system:notification-service
+    container_name: aso_notification
+    depends_on: [rabbitmq]
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+
+  analytics-service:
+    image: erickfabricioc/aso-ciencias-system:analytics-service
+    container_name: aso_analytics
+    depends_on: [rabbitmq]
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+
+  payment-service:
+    image: erickfabricioc/aso-ciencias-system:payment-service
+    container_name: aso_payment
+    depends_on: [rabbitmq]
+
+  invoice-service:
+    image: erickfabricioc/aso-ciencias-system:invoice-service
+    container_name: aso_invoice
+    depends_on: [rabbitmq]
+
+  review-service:
+    image: erickfabricioc/aso-ciencias-system:review-service
+    container_name: aso_review
+    depends_on: [rabbitmq]
+
+  support-service:
+    image: erickfabricioc/aso-ciencias-system:support-service
+    container_name: aso_support
+    depends_on: [rabbitmq]
+
+  audit-service:
+    image: erickfabricioc/aso-ciencias-system:audit-service
+    container_name: aso_audit
+    depends_on: [rabbitmq]
+
+  api-gateway:
+    image: erickfabricioc/aso-ciencias-system:gateway
+    container_name: aso_gateway
+    ports: ["8080:8080"]
+    depends_on: [auth-service, inventory-service, sales-service]

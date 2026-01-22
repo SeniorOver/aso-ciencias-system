@@ -16,13 +16,17 @@ import { User } from './users/entities/user.entity';
     // 2. Configuración Postgres (LO QUE YA TENIAS)
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST || 'postgres', 
-      port: 5432,
-      username: 'admin',
-      password: 'password123',
-      database: 'aso_db',
+      host: process.env.DB_HOST || 'postgres',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      username: process.env.DB_USERNAME || 'admin', // <--- ¡Ahora sí escucha!
+      password: process.env.DB_PASSWORD || 'password123',
+      database: process.env.DB_NAME || 'aso_db',
       autoLoadEntities: true,
       synchronize: true,
+      // CONFIGURACIÓN SSL (Obligatoria para AWS RDS)
+      ssl: process.env.DB_SSL === 'true' ? {
+        rejectUnauthorized: false
+      } : false,
     }),
     TypeOrmModule.forFeature([User]),
   ],

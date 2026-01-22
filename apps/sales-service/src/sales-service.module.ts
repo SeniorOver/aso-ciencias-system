@@ -10,14 +10,17 @@ import { Sale } from './sales/entities/sale.entity';
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      // CORRECCIÓN 1: Usar nombre del contenedor 'postgres'
-      host: process.env.DB_HOST || 'postgres', 
-      port: 5432,
-      username: 'admin',
-      password: 'password123',
-      database: 'aso_db',
+      host: process.env.DB_HOST || 'postgres',
+      port: parseInt(process.env.DB_PORT || '5432'), // <--- Agregado parseInt
+      username: process.env.DB_USERNAME || 'admin', // <--- CORREGIDO: Ahora lee la variable
+      password: process.env.DB_PASSWORD || 'password123',
+      database: process.env.DB_NAME || 'aso_db',
       autoLoadEntities: true,
       synchronize: true,
+      // CONFIGURACIÓN SSL (Obligatoria para AWS RDS)
+      ssl: process.env.DB_SSL === 'true' ? {
+        rejectUnauthorized: false
+      } : false,
     }),
     TypeOrmModule.forFeature([Sale]),
     HttpModule,
@@ -27,7 +30,6 @@ import { Sale } from './sales/entities/sale.entity';
         name: 'NOTIFICATION_SERVICE',
         transport: Transport.RMQ,
         options: {
-          // CORRECCIÓN 2: Usar nombre del contenedor 'rabbitmq'
           urls: [process.env.RABBITMQ_URL || 'amqp://rabbitmq:5672'], 
           queue: 'notifications_queue',
           queueOptions: {
