@@ -1,0 +1,38 @@
+name: CI - Integración Continua ASO
+
+# Configuración de Ramas Reales
+on:
+  push:
+    branches: 
+      - "main"
+      - "qa"
+      - "high-availability"
+      - "entrega-backend" # <--- ¡Importante! Para que pruebe tu entrega de hoy
+  pull_request:
+    branches: 
+      - "main"
+      - "qa"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Descargar código
+    - name: 📥 Checkout del código
+      uses: actions/checkout@v3
+
+    # 2. Configurar Node.js 18
+    - name: 🟢 Configurar Node.js 18
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    # 3. Instalar dependencias
+    - name: 📦 Instalar dependencias
+      run: npm ci
+
+    # 4. Compilar (Build)
+    - name: 🔨 Compilar Proyecto
+      run: npm run build
